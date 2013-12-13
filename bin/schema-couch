@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+
+var path = require('path');
+    schemaCouch = require('..');
+
+
+function usage() {
+    console.log('\nUsage: schema-couch dir url');
+}
+var args = process.argv.slice(2);
+
+if (!args.length || args.length < 2) {
+    return usage();
+}
+
+var full_path = path.resolve(args[0]);
+
+schemaCouch(full_path, args[1], function(err, data){
+  if (err) console.log(err);
+});

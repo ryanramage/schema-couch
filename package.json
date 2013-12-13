@@ -1,14 +1,27 @@
 {
   "name": "schema-couch",
   "version": "0.0.0",
-  "description": "",
+  "description": "Using json-schemas, make a pretty decent couch api. Relationships (and batteries) included.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "bin": {
+    "schema-couch": "./bin/schema-couch"
+  },
+  "author": "Ryan Ramage",
   "license": "BSD-2-Clause",
   "dependencies": {
     "couchapp": "~0.10.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/ryanramage/schema-couch.git"
+  },
+  "maintainers": [
+    {
+      "name": "Ryan Ramage",
+      "web": "https://github.com/ryanramage"
+    }
+  ]
 }
