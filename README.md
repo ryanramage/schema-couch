@@ -40,6 +40,13 @@ After it uploads, use futon to create a new doc, like:
 
 And keep trying to save. The error messages will hopefully guide you.
 
+Relationships
+-------------
+
+As you can see in the example schemas, some additional (non-standard) properties are used to describe
+relationships between schemas. Also, a way to create filters of lists, and values that appear in lists.
+More information will come later as we/you experiment. Feedback welcome.
+
 API
 ---
 
