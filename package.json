@@ -4,7 +4,7 @@
   "description": "Using json-schemas, make a pretty decent couch api. Relationships (and batteries) included.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tape test/*.js"
   },
   "bin": {
     "schema-couch": "./bin/schema-couch"
@@ -23,5 +23,8 @@
       "name": "Ryan Ramage",
       "web": "https://github.com/ryanramage"
     }
-  ]
+  ],
+  "devDependencies": {
+    "tape": "~2.3.0"
+  }
 }
