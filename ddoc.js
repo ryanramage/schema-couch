@@ -86,7 +86,6 @@ ddoc.shows.schemas = function(doc, req) {
 }
 
 ddoc.shows.types = function(doc, req) {
-    log(this);
     var data = [];
 
     if (this.views.lib.types) {
@@ -103,31 +102,14 @@ ddoc.shows.types = function(doc, req) {
 
 ddoc.views.list_by_type = {
   map: function map(doc) {
-    if (doc.type) {
-      var key = [doc.type],
-          value = null,
-          emitted_once = false;
-
-      if (doc.data) {
-        try {
-          var schema = require('views/lib/types/' + doc.type);
-          var list = schema.list;
-          if (list) {
-            var dotaccess = require('views/lib/dotaccess');
-            var jsonselect = require('views/lib/jsonselect');
-
-            if (list.value) {
-              value = {};
-              for (var prop in list.value) {
-                var selector = list.value[prop];
-                if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
-                else value[prop] = dotaccess(doc.data, selector);
-              }
-            } // end list.value
-          } //end list
-        } catch(e) {}
-      } // end doc.data
-      emit(key, value);
+    if (doc.type && doc.data) {
+      try {
+        var schema = require('views/lib/types/' + doc.type),
+            dotaccess = require('views/lib/dotaccess'),
+            jsonselect = require('views/lib/jsonselect'),
+            list_by_type = require('views/lib/list_by_type');
+        list_by_type(schema, doc, emit, dotaccess, jsonselect);
+      } catch(e) {log(e);}
     }
   },
   reduce: "_count"
@@ -135,43 +117,15 @@ ddoc.views.list_by_type = {
 
 ddoc.views.list_by_type_and_filter = {
   map: function map(doc) {
-    if (doc.type) {
-      var key = [doc.type],
-          value = null,
-          emitted_once = false;
-
-      if (doc.data) {
+    if (doc.type && doc.data) {
         try {
-          var schema = require('views/lib/types/' + doc.type);
-          var list = schema.list;
-          if (list) {
-            var dotaccess = require('views/lib/dotaccess');
-            var jsonselect = require('views/lib/jsonselect');
+          var schema = require('views/lib/types/' + doc.type),
+              dotaccess = require('views/lib/dotaccess'),
+              jsonselect = require('views/lib/jsonselect'),
+              list_by_type_and_filter = require('views/lib/list_by_type_and_filter');
 
-            if (list.value) {
-              value = {};
-              for (var prop in list.value) {
-                var selector = list.value[prop];
-                if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
-                else value[prop] = dotaccess(doc.data, selector);
-              }
-            } // end list.value
-
-            if (list.filters) {
-              for (var filter_name in list.filters) {
-                var filter_key = [doc.type, filter_name];
-                list.filters[filter_name].forEach(function(filter_selector){
-                  if (selector[0] == '.') filter_key = filter_key.concat( jsonselect.match(filter_selector, doc.data) );
-                  else filter_key = filter_key.concat( dotaccess(doc.data, filter_selector) );
-                });
-                emit(filter_key, value);
-                emitted_once = true;
-              }
-            } // end list.filters
-          } //end list
-        } catch(e) { log('oops'); log(e); }
-      } // end doc.data
-      if (!emitted_once) emit(key, value);
+          list_by_type_and_filter(schema, doc, emit, dotaccess, jsonselect);
+        } catch(e) { log(e); }
     }
   },
   reduce: "_count"
@@ -186,44 +140,9 @@ ddoc.views.relations = {
           var schema = require('views/lib/types/' + doc.type),
               dotaccess = require('views/lib/dotaccess'),
               jsonselect = require('views/lib/jsonselect'),
-              belongs_to = schema.belongs_to;
-          for (var i = 0; i < belongs_to.length; i++) {
-            var belongs = belongs_to[i];
-            if (belongs && belongs.foreign_key && belongs.many_name) {
-              var keys = [];
-              if (belongs.foreign_key[0] == '.') {
-                keys = keys.concat.apply(keys,jsonselect.match(belongs.foreign_key, doc.data));
-              }
-              else {
-                var key_value = dotaccess(doc.data, belongs.foreign_key);
-                if (key_value) keys = [ key_value ];
-              }
-              for (var x in keys) {
-                var foreign_key = keys[x],
-                    value = null;
+              relations = require('views/lib/relations');
 
-                if (belongs.value) {
-                  value = {};
-                  for (var prop in belongs.value) {
-                    var selector = belongs.value[prop];
-                    if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
-                    else value[prop] = dotaccess(doc.data, selector);
-                  }
-                } // end belongs.value
-
-                var key = [foreign_key, belongs.many_name];
-
-                if (belongs.extra_keys) {
-                  for (var j=0; j < belongs.extra_keys.length; j++) {
-                    var selector = belongs.extra_keys[j];
-                    if (selector[0] == '.') key = key.concat( jsonselect.match(selector, doc.data) );
-                    else key = key.concat( dotaccess(doc.data, selector) );
-                  }
-                } // end belongs.extra_keys
-                emit(key, value);
-              } // end keys.forEach
-            } //end belongs && belongs.parent
-          } // end for belongs_to
+          relations(schema, doc, emit, dotaccess, jsonselect);
         } catch(e) {  log(e); }
     }
   },
@@ -237,44 +156,9 @@ ddoc.views.relations_with_filters = {
           var schema = require('views/lib/types/' + doc.type),
               dotaccess = require('views/lib/dotaccess'),
               jsonselect = require('views/lib/jsonselect'),
-              belongs_to = schema.belongs_to;
-          for (var i = 0; i < belongs_to.length; i++) {
-            var belongs = belongs_to[i];
-            if (belongs && belongs.foreign_key && belongs.many_name) {
-              var keys = [];
-              if (belongs.foreign_key[0] == '.') {
-                keys = keys.concat.apply(keys,jsonselect.match(belongs.foreign_key, doc.data));
-              }
-              else {
-                var key_value = dotaccess(doc.data, belongs.foreign_key);
-                if (key_value) keys = [ key_value ];
-              }
-              for (var x in keys) {
-                var foreign_key = keys[x],
-                    value = null;
+              relations_with_filters = require('views/lib/relations_with_filters');
 
-                if (belongs.value) {
-                  value = {};
-                  for (var prop in belongs.value) {
-                    var selector = belongs.value[prop];
-                    if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
-                    else value[prop] = dotaccess(doc.data, selector);
-                  }
-                } // end belongs.value
-
-                if (belongs.filters) {
-                  for (var filter_name in belongs.filters) {
-                    var filter_key = [foreign_key, belongs.many_name, filter_name];
-                    belongs.filters[filter_name].forEach(function(filter_selector){
-                      if (selector[0] == '.') filter_key = filter_key.concat( jsonselect.match(filter_selector, doc.data) );
-                      else filter_key = filter_key.concat( dotaccess(doc.data, filter_selector) );
-                    });
-                    emit(filter_key, value);
-                  }
-                }
-              } // end keys.forEach
-            } //end belongs && belongs.parent
-          } // end for belongs_to
+          relations_with_filters (schema, doc, emit, dotaccess, jsonselect);
         } catch(e) {  log(e); }
     }
   },
@@ -339,6 +223,10 @@ ddoc.lib.uri.schemes.urn = loadFile('lib/uri/schemes/urn');
 ddoc.views.lib = {
   dotaccess: loadFile('views/lib/dotaccess'),
   jsonselect: loadFile('views/lib/jsonselect'),
+  list_by_type: loadFile('views/lib/list_by_type'),
+  list_by_type_and_filter: loadFile('views/lib/list_by_type_and_filter'),
+  relations: loadFile('views/lib/relations'),
+  relations_with_filters: loadFile('views/lib/relations_with_filters'),
   types: {}
 }
 
