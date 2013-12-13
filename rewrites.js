@@ -131,7 +131,6 @@ module.exports = function(name, schema) {
 
   if (schema.belongs_to) {
     schema.belongs_to.forEach(function(belongs){
-      console.log(belongs);
 
       // the listing of children filters, using grouping
       rewrites.push({
@@ -161,7 +160,6 @@ module.exports = function(name, schema) {
                   endkey: endkey.slice(0)
                 }
               };
-          console.log(JSON.stringify(base_rewrite));
           rewrites.push(base_rewrite);
           for (var i=0; i< belongs.filters[filter_name].length; i++) {
             var filter = belongs.filters[filter_name][i],
@@ -179,7 +177,6 @@ module.exports = function(name, schema) {
                 endkey: endkey.slice(0)
               }
             };
-            console.log(JSON.stringify(filter_rewrite));
             rewrites.push(filter_rewrite);
           }
         }
