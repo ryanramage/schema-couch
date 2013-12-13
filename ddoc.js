@@ -291,7 +291,7 @@ ddoc.validate_doc_update = function(newDoc, oldDoc, userCtx) {
         return
     }
     if (!newDoc.data) {
-        throw({forbidden : 'A document with a type must have a data object'});
+        throw({forbidden : 'A document with a type must have a data property'});
     }
     var schema;
     try {
