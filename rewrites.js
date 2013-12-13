@@ -1,35 +1,3 @@
-
-   // { "from": "/quiz/:a/submissions" , "to"  : "_view/relations", "query": { "startkey": [":a", "submission"], "endkey": [":a", "submission", {}]  } },
-   //  { "from": "/quiz/:a/difficulty_subquestions", "to"  : "_view/relations", "query": { "startkey": [":a", "quiz", "difficulty"], "endkey": [":a", "quiz", "difficulty", {}]  } },
-   //  { "from": "/quiz/:a/category_subquestions", "to"  : "_view/relations", "query": { "startkey": [":a", "quiz", "category"], "endkey": [":a", "quiz", "category", {}]  } },
-
-// / -> list all types
-// /quiz  -> list all quizes
-// /quiz/schema
-// /quiz/filters -> [category,difficulty]
-// /quiz/filters/category -> list quiz category counts (where category is in quiz.list.filters)
-// /quiz/filters/category/film -> first level filter
-// /quiz/filters/catagory/film/5 -> second level filter
-
-// /quiz/id/322323232323233223 -> quiz json
-// /quiz/id/322323232323233223/has_many -> list they types of children
-// /quiz/id/322323232323233223/has_many/submissions -> list related submissions
-// /quiz/id/322323232323233223/has_many/submissions/filters -> []
-// /quiz/id/322323232323233223/has_many/related/filters -> [category, difficulty]
-// /quiz/id/322323232323233223/has_many/subquestions/filters -> [category, difficulty]
-// /quiz/id/322323232323233223/has_many/subquestions/filters/category -> list quiz category counts
-// /quiz/id/322323232323233223/has_many/subquestions/filters/category/film ->
-// /quiz/id/322323232323233223/belongs_to -> [related_from, parent_quiz]
-// /quiz/id/322323232323233223/belongs_to/related_from -> many docs?
-// /quiz/id/322323232323233223/belongs_to/parent_quiz -> one doc
-
-// /submission -> list all submissions
-// /submission/filters -> []
-// /submission/ddsddsdsdsdsdsdsds/has_many -> []
-// /submission/ddsddsdsdsdsdsdsds/belongs_to -> [quiz, user]
-// /submission/ddsddsdsdsdsdsdsds/belongs_to/quiz -> one doc
-// /submission/ddsddsdsdsdsdsdsds/belongs_to/user -> one doc
-
 module.exports = function(name, schema) {
   var rewrites = [];
 
