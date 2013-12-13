@@ -5,6 +5,15 @@ var ddoc = {
   shows: {}
 }
 
+ddoc.shows.unhandled = function(doc, req) {
+
+
+    return {
+        'headers' : {'Content-Type' : 'application/json'},
+        'body' :  JSON.stringify({error: "not found", ok: false})
+    };
+}
+
 ddoc.shows.has_many = function(doc, req) {
   var type = req.query.type;
   try {
@@ -207,7 +216,7 @@ ddoc.rewrites = [
 
     { from: '/:type/schema', to: '_show/schemas', query: { type: ':type' }},
     { from: '/', to: '_view/list_by_type', query: { reduce: 'true', group_level: '1' }},
-    { from: '/*', to: '*' }
+    { from: '/*', to: '_show/unhandled' }
 ]
 
 ddoc.lib = {};
