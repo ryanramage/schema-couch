@@ -347,7 +347,7 @@ module.exports = ddoc;
 
 function loadFile(path) {
   var fs = require('fs');
-  var finalPath = __dirname + '/couchapp/' + path + '.js';
+  var finalPath = __dirname + '/ddoc_libs/' + path + '.js';
   //console.log('loading: ', __filename);
   return fs.readFileSync(finalPath).toString();
 }
