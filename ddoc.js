@@ -190,22 +190,17 @@ ddoc.views.relations = {
           for (var i = 0; i < belongs_to.length; i++) {
             var belongs = belongs_to[i];
             if (belongs && belongs.foreign_key && belongs.many_name) {
-              log(belongs.foreign_key);
               var keys = [];
               if (belongs.foreign_key[0] == '.') {
                 keys = keys.concat.apply(keys,jsonselect.match(belongs.foreign_key, doc.data));
-                log('jsonselect keys');
-                log(keys);
               }
               else {
                 var key_value = dotaccess(doc.data, belongs.foreign_key);
                 if (key_value) keys = [ key_value ];
               }
-              log(keys);
               for (var x in keys) {
                 var foreign_key = keys[x],
                     value = null;
-                log('x'); log(x);
 
                 if (belongs.value) {
                   value = {};
@@ -229,7 +224,7 @@ ddoc.views.relations = {
               } // end keys.forEach
             } //end belongs && belongs.parent
           } // end for belongs_to
-        } catch(e) { log('in exception'); log(e); }
+        } catch(e) {  log(e); }
     }
   },
   reduce: '_count'
@@ -241,12 +236,22 @@ ddoc.views.relations_with_filters = {
         try {
           var schema = require('views/lib/types/' + doc.type),
               dotaccess = require('views/lib/dotaccess'),
+              jsonselect = require('views/lib/jsonselect'),
               belongs_to = schema.belongs_to;
           for (var i = 0; i < belongs_to.length; i++) {
             var belongs = belongs_to[i];
             if (belongs && belongs.foreign_key && belongs.many_name) {
-              var foreign_key = dotaccess(doc.data, belongs.foreign_key);
-              if (foreign_key) {
+              var keys = [];
+              if (belongs.foreign_key[0] == '.') {
+                keys = keys.concat.apply(keys,jsonselect.match(belongs.foreign_key, doc.data));
+              }
+              else {
+                var key_value = dotaccess(doc.data, belongs.foreign_key);
+                if (key_value) keys = [ key_value ];
+              }
+              for (var x in keys) {
+                var foreign_key = keys[x],
+                    value = null;
 
                 if (belongs.value) {
                   value = {};
@@ -257,23 +262,20 @@ ddoc.views.relations_with_filters = {
                   }
                 } // end belongs.value
 
-                var key = [foreign_key, belongs.many_name],
-                    value = null;
-                if (belongs.relation) {
-                  key.push(belongs.relation);
+                if (belongs.filters) {
+                  for (var filter_name in belongs.filters) {
+                    var filter_key = [foreign_key, belongs.many_name, filter_name];
+                    belongs.filters[filter_name].forEach(function(filter_selector){
+                      if (selector[0] == '.') filter_key = filter_key.concat( jsonselect.match(filter_selector, doc.data) );
+                      else filter_key = filter_key.concat( dotaccess(doc.data, filter_selector) );
+                    });
+                    emit(filter_key, value);
+                  }
                 }
-                // if (belongs.key) {
-                //   for (var j=0; j < belongs.key.length; j++) {
-                //     var key_values = dotaccess(doc.data, belongs.key[j]);
-                //     key = key.concat(key_values);
-                //   }
-                // } // end belongs.key
-
-                emit(key, value);
-              } // end foreign_key
+              } // end keys.forEach
             } //end belongs && belongs.parent
           } // end for belongs_to
-        } catch(e) { log('in exception'); log(e); }
+        } catch(e) {  log(e); }
     }
   },
   reduce: '_count'
