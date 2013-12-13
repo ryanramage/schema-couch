@@ -1,6 +1,7 @@
 var fs = require('fs'),
     path = require('path'),
     couchapp = require('couchapp'),
+    rewrites = require('./rewrites'),
     request  = require('./node_modules/couchapp/node_modules/request');
 
 module.exports = function(schema_dir, dbPath, loaded_callback, pushed_callback) {
@@ -20,8 +21,16 @@ module.exports = function(schema_dir, dbPath, loaded_callback, pushed_callback) 
   var schemas = fs.readdirSync(schema_dir);
   schemas.forEach(function(schema){
     var nice_name = schema.substring(0, schema.length -3); // take off .js
+    var schema_path = path.join(schema_dir, schema);
 
-    ddoc.views.lib.types[nice_name] = fs.readFileSync( path.join(schema_dir, schema) ).toString()
+    ddoc.views.lib.types[nice_name] = fs.readFileSync( schema_path ).toString()
+
+    var to_add = rewrites(nice_name, require(schema_path));
+
+    to_add.forEach(function(rewrite){
+      ddoc.rewrites.unshift(rewrite);
+    })
+
   });
 
 

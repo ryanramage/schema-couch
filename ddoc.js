@@ -5,6 +5,52 @@ var ddoc = {
   shows: {}
 }
 
+ddoc.shows.has_many = function(doc, req) {
+  var type = req.query.type;
+  try {
+      var schema = require('views/lib/types/' + type);
+      var results = [];
+      if (schema.has_many) {
+        schema.has_many.forEach(function(many){
+          results.push(many.name);
+        })
+      }
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify({rows: results})
+      };
+  } catch(e) {
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify({ok: false, msg: "Type not found"})
+      }
+  }
+}
+
+ddoc.shows.belongs_to = function(doc, req) {
+  var type = req.query.type;
+  try {
+      var schema = require('views/lib/types/' + type);
+      var results = [];
+      if (schema.belongs_to) {
+        schema.belongs_to.forEach(function(belongs_to){
+          var name = belongs_to.name || belongs_to.type;
+          results.push(name);
+        })
+      }
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify({rows: results})
+      };
+  } catch(e) {
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify({ok: false, msg: "Type not found"})
+      }
+  }
+}
+
+
 ddoc.shows.schemas = function(doc, req) {
     var type = req.query.type;
     if (!type) {
@@ -59,32 +105,27 @@ ddoc.views.list_by_type = {
   map: function map(doc) {
     if (doc.type) {
       var key = [doc.type],
-          value = null;
+          value = null,
+          emitted_once = false;
 
       if (doc.data) {
         try {
           var schema = require('views/lib/types/' + doc.type);
-          var view = schema.list_by_type;
-          if (view) {
-            //var jsonselect = require('views/lib/jsonselect');
+          var list = schema.list;
+          if (list) {
             var dotaccess = require('views/lib/dotaccess');
-            if (view.key) {
-              for (var i=0; i < view.key.length; i++) {
-                //var key_values = jsonselect.match(view.key[i], doc.data);
-                var key_values = dotaccess(doc.data, view.key[i]);
-                key = key.concat(key_values);
-              }
-            } // end view.key
-            if (view.value) {
+            var jsonselect = require('views/lib/jsonselect');
+
+            if (list.value) {
               value = {};
-              for (var prop in view.value) {
-                var access = view.value[prop];
-                //value[prop] =  jsonselect.match(selector, doc.data);
-                value[prop] = dotaccess(doc.data, access);
+              for (var prop in list.value) {
+                var selector = list.value[prop];
+                if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
+                else value[prop] = dotaccess(doc.data, selector);
               }
-            } // end view.value
-          } //end view
-        } catch(e) { log(e); }
+            } // end list.value
+          } //end list
+        } catch(e) {}
       } // end doc.data
       emit(key, value);
     }
@@ -92,47 +133,151 @@ ddoc.views.list_by_type = {
   reduce: "_count"
 }
 
+ddoc.views.list_by_type_and_filter = {
+  map: function map(doc) {
+    if (doc.type) {
+      var key = [doc.type],
+          value = null,
+          emitted_once = false;
+
+      if (doc.data) {
+        try {
+          var schema = require('views/lib/types/' + doc.type);
+          var list = schema.list;
+          if (list) {
+            var dotaccess = require('views/lib/dotaccess');
+            var jsonselect = require('views/lib/jsonselect');
+
+            if (list.value) {
+              value = {};
+              for (var prop in list.value) {
+                var selector = list.value[prop];
+                if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
+                else value[prop] = dotaccess(doc.data, selector);
+              }
+            } // end list.value
+
+            if (list.filters) {
+              for (var filter_name in list.filters) {
+                var filter_key = [doc.type, filter_name];
+                list.filters[filter_name].forEach(function(filter_selector){
+                  if (selector[0] == '.') filter_key = filter_key.concat( jsonselect.match(filter_selector, doc.data) );
+                  else filter_key = filter_key.concat( dotaccess(doc.data, filter_selector) );
+                });
+                emit(filter_key, value);
+                emitted_once = true;
+              }
+            } // end list.filters
+          } //end list
+        } catch(e) { log('oops'); log(e); }
+      } // end doc.data
+      if (!emitted_once) emit(key, value);
+    }
+  },
+  reduce: "_count"
+}
+
+
+
 ddoc.views.relations = {
   map: function map(doc) {
     if (doc.type && doc.data) {
         try {
           var schema = require('views/lib/types/' + doc.type),
               dotaccess = require('views/lib/dotaccess'),
-              views = schema.belongs_to;
-          for (var i = 0; i < views.length; i++) {
-            var view = views[i];
-            if (view && view.parent) {
-              var parent_id = dotaccess(doc.data, view.parent);
-              if (parent_id) {
-                var key = [parent_id, doc.type],
+              jsonselect = require('views/lib/jsonselect'),
+              belongs_to = schema.belongs_to;
+          for (var i = 0; i < belongs_to.length; i++) {
+            var belongs = belongs_to[i];
+            if (belongs && belongs.foreign_key && belongs.many_name) {
+              log(belongs.foreign_key);
+              var keys = [];
+              if (belongs.foreign_key[0] == '.') {
+                keys = keys.concat.apply(keys,jsonselect.match(belongs.foreign_key, doc.data));
+                log('jsonselect keys');
+                log(keys);
+              }
+              else {
+                var key_value = dotaccess(doc.data, belongs.foreign_key);
+                if (key_value) keys = [ key_value ];
+              }
+              log(keys);
+              for (var x in keys) {
+                var foreign_key = keys[x],
                     value = null;
-                if (view.relation) {
-                  key.push(view.relation);
-                }
-                if (view.key) {
-                  for (var j=0; j < view.key.length; j++) {
-                    var key_values = dotaccess(doc.data, view.key[j]);
-                    key = key.concat(key_values);
-                  }
-                } // end view.key
-                if (view.value) {
+                log('x'); log(x);
+
+                if (belongs.value) {
                   value = {};
-                  for (var prop in view.value) {
-                    var access = view.value[prop];
-                    value[prop] = dotaccess(doc.data, access);
+                  for (var prop in belongs.value) {
+                    var selector = belongs.value[prop];
+                    if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
+                    else value[prop] = dotaccess(doc.data, selector);
                   }
-                } // end view.value
+                } // end belongs.value
+
+                var key = [foreign_key, belongs.many_name];
+
+                if (belongs.extra_keys) {
+                  for (var j=0; j < belongs.extra_keys.length; j++) {
+                    var selector = belongs.extra_keys[j];
+                    if (selector[0] == '.') key = key.concat( jsonselect.match(selector, doc.data) );
+                    else key = key.concat( dotaccess(doc.data, selector) );
+                  }
+                } // end belongs.extra_keys
                 emit(key, value);
-              } // end parent_id
-            } //end view && view.parent
-          } // end for views
+              } // end keys.forEach
+            } //end belongs && belongs.parent
+          } // end for belongs_to
         } catch(e) { log('in exception'); log(e); }
     }
   },
   reduce: '_count'
 }
 
+ddoc.views.relations_with_filters = {
+  map: function map(doc) {
+    if (doc.type && doc.data) {
+        try {
+          var schema = require('views/lib/types/' + doc.type),
+              dotaccess = require('views/lib/dotaccess'),
+              belongs_to = schema.belongs_to;
+          for (var i = 0; i < belongs_to.length; i++) {
+            var belongs = belongs_to[i];
+            if (belongs && belongs.foreign_key && belongs.many_name) {
+              var foreign_key = dotaccess(doc.data, belongs.foreign_key);
+              if (foreign_key) {
 
+                if (belongs.value) {
+                  value = {};
+                  for (var prop in belongs.value) {
+                    var selector = belongs.value[prop];
+                    if (selector[0] == '.') value[prop] = jsonselect.match(selector, doc.data);
+                    else value[prop] = dotaccess(doc.data, selector);
+                  }
+                } // end belongs.value
+
+                var key = [foreign_key, belongs.many_name],
+                    value = null;
+                if (belongs.relation) {
+                  key.push(belongs.relation);
+                }
+                // if (belongs.key) {
+                //   for (var j=0; j < belongs.key.length; j++) {
+                //     var key_values = dotaccess(doc.data, belongs.key[j]);
+                //     key = key.concat(key_values);
+                //   }
+                // } // end belongs.key
+
+                emit(key, value);
+              } // end foreign_key
+            } //end belongs && belongs.parent
+          } // end for belongs_to
+        } catch(e) { log('in exception'); log(e); }
+    }
+  },
+  reduce: '_count'
+}
 
 ddoc.validate_doc_update = function(newDoc, oldDoc, userCtx) {
 
@@ -169,13 +314,14 @@ ddoc.validate_doc_update = function(newDoc, oldDoc, userCtx) {
 }
 
 ddoc.rewrites = [
-    { "description": "Access to this database" , "from": "_db" , "to"  : "../.." },
-    { "from": "_db/*" , "to"  : "../../*" },
-    { "description": "Access to this design document" , "from": "_ddoc" , "to"  : "" },
-    { "from": "_ddoc/*" , "to"  : "*"},
+    { from: '_db'     , to  : '../..',    description: "Access to this database"  },
+    { from: '_db/*'   , to  : '../../*' },
+    { from: '_ddoc'   , to  : '',     description: "Access to this design document"  },
+    { from: '_ddoc/*' , to  : '*'},
 
-    { "from": "/", "to": "index.html" },
-    { "from": "/*", "to": "*" }
+    { from: '/:type/schema', to: '_show/schemas', query: { type: ':type' }},
+    { from: '/', to: '_view/list_by_type', query: { reduce: 'true', group_level: '1' }},
+    { from: '/*', to: '*' }
 ]
 
 ddoc.lib = {};
@@ -189,7 +335,9 @@ ddoc.lib.uri.schemes.urn = loadFile('lib/uri/schemes/urn');
 
 
 ddoc.views.lib = {
-  dotaccess: "module.exports = function (obj, path) { var get = new Function('_', 'return _.' + path);  return get(obj);  };"
+  dotaccess: loadFile('views/lib/dotaccess'),
+  jsonselect: loadFile('views/lib/jsonselect'),
+  types: {}
 }
 
 module.exports = ddoc;

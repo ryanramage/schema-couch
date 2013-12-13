@@ -1,18 +1,40 @@
 module.exports = {
     type: "object",
-    additionalProperties: false,
-    list_by_type: {
-        key: ["category", "difficulty"],
+    list: {
+        filters: {
+            category: ["category", "difficulty"],
+            difficulty: ["difficulty"]
+        },
         value: { question: "question" }
     },
     has_many: [
-        { name: 'submissions', type: 'submission' },
-        { name: 'difficulty_subquestions', type: 'quiz', relation: 'difficulty' },
-        { name: 'category_subquestions',   type: 'quiz', relation: 'category'   }
+        { name: 'submissions',  type: 'submission' },
+        { name: 'related',      type: 'quiz'      },
+        { name: 'subquestions', type: 'quiz'      }
     ],
     belongs_to: [
-      { parent: "parent_question_id", type: 'quiz', relation: "difficulty", key: ["difficulty"], value: { question: "question"  }},
-      { parent: "parent_question_id", type: 'quiz', relation: "category",   key: ["category"]  }
+      {
+        name: 'related_from',
+        type: 'quiz',
+        many_name: 'related',
+        foreign_key: '.related',
+        filters: {
+            category: ["category", "difficulty"],
+            difficulty: ["difficulty"]
+        },
+        value: { question: "question" }
+      },
+      {
+        name: 'parent_quiz',
+        type: 'quiz',
+        many_name: 'subquestions',
+        foreign_key: 'parent_question_id',
+        filters: {
+            category: ["category", "difficulty"],
+            difficulty: ["difficulty"]
+        },
+        value: { question: "question" }
+      }
     ],
     properties: {
         question: {
@@ -21,6 +43,12 @@ module.exports = {
         },
         parent_question_id: {
           type: "string"
+        },
+        related: {
+            type: "array",
+            items: {
+                type: "string"
+            }
         },
         choices: {
             type: "object",
