@@ -15,11 +15,11 @@ var path = require('path'),
 
 
 function usage() {
-    console.log('\nUsage one of:');
-    console.log('\n\tschema-couch push [url] [folder]');
-    console.log('\n\tschema-couch init');
-    console.log('\n\tschema-couch dev');
-    console.log('\n\tschema-couch dist');
+    console.log('\nUsage one of:\n');
+    console.log('\tschema-couch push [url] [folder]');
+    console.log('\tschema-couch init');
+    console.log('\tschema-couch dev');
+    console.log('\tschema-couch dist');
 }
 
 if (!args.length || args.length < 1) {
