@@ -6,10 +6,12 @@ var path = require('path'),
     fs = require('fs'),
     cpr = require('cpr'),
     rimraf = require('rimraf'),
+    mkdirp = require('mkdirp'),
     connect = require('connect'),
     open = require('open'),
     argv = require('optimist').argv,
     args = argv._,
+    spawn = require('child_process').spawn,
     portrange = 45032,
     sever;
     schemaCouch = require('..');
@@ -30,6 +32,7 @@ if (!args.length || args.length < 1) {
 if (args[0] == 'init') init();
 if (args[0] == 'push') push(args[1], args[2])
 if (args[0] == 'dev')  dev()
+if (args[0] == 'dist') dist()
 
 
 function push(couch_url, schema_folder) {
@@ -83,6 +86,10 @@ function dev() {
   var p = path.resolve('.', 'jam/require.prod.js');
   try { fs.unlinkSync(p); } catch(e){}
 
+  server();
+}
+
+function server(){
   // start a local server on a random port
   var middleware = [];
   middleware.push( connect.static(path.resolve('.')  ));
@@ -99,8 +106,8 @@ function dev() {
       })
 
   })
-
 }
+
 
 function getPort (app, cb) {
   var port = portrange
@@ -118,6 +125,60 @@ function getPort (app, cb) {
   })
 }
 
+
+function dist() {
+
+  var dir = path.resolve('.'),
+      templates_dir = path.resolve(dir, 'templates'),
+      schemas_dir = path.resolve(dir, 'schemas'),
+      schemas_paths = fs.readdirSync(schemas_dir),
+      types = [];
+  schemas_paths.forEach(function(schema){
+    if ( schema.indexOf('.js', schema.length - '.js'.length) === -1) return;
+    var type_name = schema.substring(0, schema.length -3); // take off .js
+    types.push(type_name);
+  });
+  if (types.length == 0) console.log("Warning: no schemas");
+
+  //  -- make blank templates for undefined type templates
+  types.forEach(function(type){
+    mkdirp.sync( path.resolve(templates_dir, type)  );
+    createIfNotExist( path.resolve(templates_dir, type, 'list.html') )
+    createIfNotExist( path.resolve(templates_dir, type, 'view.html') )
+    createIfNotExist( path.resolve(templates_dir, type, 'edit.html') )
+    createIfNotExist( path.resolve(templates_dir, type, 'create.html') )
+  })
+
+
+
+  //  -- make the templates.js define([text!game])
+  var code = 'define([';
+  types.forEach(function(type){
+    code += "'text!templates/" + type + "/list.html',";
+    code += "'text!templates/" + type + "/view.html',";
+    code += "'text!templates/" + type + "/edit.html',";
+    code += "'text!templates/" + type + "/create.html',";
+  });
+  code += '], function(){})'
+  fs.writeFileSync( path.resolve(templates_dir, 'build.js')  , code);
+
+
+  //  -- make a production jam
+  var jpath = path.resolve(__dirname, '../node_modules/.bin/jam');
+  var jam  = spawn(jpath, ['compile', '-i', 'js/app', '-i', 'templates/build',  '-o', 'jam/require.prod.js'])
+  jam.stdin.end();
+  jam.stdout.on('data', function(data){ console.log(data.toString()) });
+
+}
+
+function createIfNotExist(path) {
+  var stat;
+  try { stat = fs.statSync(path); } catch(e) {}
+  if (!stat || !stat.isFile()) {
+    fs.writeFileSync(path, '');
+  }
+}
+
 // thinig init
 //   -- create a new project in the working directory
 
@@ -130,7 +191,6 @@ function getPort (app, cb) {
 //   -- open the browser?
 
 // thing dist
-//  -- make a production jam
-//  -- make the templates.js define([text!game])
-//  -- make blank templates for undefined schemas
+
+
 //  -- cp to dist folder
