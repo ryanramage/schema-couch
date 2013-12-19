@@ -5,6 +5,7 @@ var path = require('path'),
     http = require('http'),
     fs = require('fs'),
     cpr = require('cpr'),
+    rimraf = require('rimraf'),
     connect = require('connect'),
     open = require('open'),
     argv = require('optimist').argv,
@@ -68,6 +69,11 @@ function init() {
       // rm package.json
       var p = path.resolve(dest_path, 'package.json');
       fs.unlinkSync(p);
+
+      // rm .git
+      var g = path.resolve(dest_path, '.git');
+      rimraf.sync(g);
+
       console.log('init complete');
   });
 }
