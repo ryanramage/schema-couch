@@ -19,7 +19,13 @@ module.exports = function(schema_dir, dbPath, loaded_callback, pushed_callback) 
 
   ddoc.views.lib.types = {};
   var schemas = fs.readdirSync(schema_dir);
+  var loaded = false;
   schemas.forEach(function(schema){
+
+    if ( schema.indexOf('.js', schema.length - '.js'.length) === -1) return;
+
+    loaded = true;
+
     var nice_name = schema.substring(0, schema.length -3); // take off .js
     var schema_path = path.join(schema_dir, schema);
 
@@ -33,16 +39,21 @@ module.exports = function(schema_dir, dbPath, loaded_callback, pushed_callback) 
 
   });
 
+  if (!loaded) return console.log('No schemas to push. Add some to the folder ' + schema_dir);
 
   couchapp.createApp(ddoc, dbPath, function (webapp) {
-
 
     // give the chance for calling app to enhance the ddoc
     loaded_callback(webapp.doc, function(err, final_doc){
       webapp.doc = final_doc;
 
       createDB(dbPath, function(err, resp){
-        if (err) throw err;
+        if (err) return pushed_callback(err);
+        resp = JSON.parse(resp.body);
+        if (resp.error && resp.error == 'unauthorized') {
+              return pushed_callback("ERROR: " + resp.error + ", " + resp.reason + " (hint use -u user -p pass)");
+        }
+        if (resp.error && resp.error != 'file_exists')  return pushed_callback("ERROR: " + resp.error + ", " + resp.reason);
         webapp.push(pushed_callback);
       })
     })

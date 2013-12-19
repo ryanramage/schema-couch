@@ -1,6 +1,6 @@
 {
   "name": "schema-couch",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Using json-schemas, make a pretty decent couch api. Relationships (and batteries) included.",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,12 @@
   "author": "Ryan Ramage",
   "license": "BSD-2-Clause",
   "dependencies": {
-    "couchapp": "~0.10.0"
+    "couchapp": "~0.10.0",
+    "schema-couch-boilerplate": "0.0.0",
+    "cpr": "~0.1.1",
+    "optimist": "~0.6.0",
+    "rimraf": "~2.2.5",
+    "connect": "~2.12.0"
   },
   "repository": {
     "type": "git",

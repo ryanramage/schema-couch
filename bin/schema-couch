@@ -1,20 +1,130 @@
 #!/usr/bin/env node
 
-var path = require('path');
+var path = require('path'),
+    url = require('url'),
+    http = require('http'),
+    fs = require('fs'),
+    cpr = require('cpr'),
+    connect = require('connect'),
+    open = require('open'),
+    argv = require('optimist').argv,
+    args = argv._,
+    portrange = 45032,
+    sever;
     schemaCouch = require('..');
 
 
 function usage() {
-    console.log('\nUsage: schema-couch dir url');
+    console.log('\nUsage one of:');
+    console.log('\n\tschema-couch push [url] [folder]');
+    console.log('\n\tschema-couch init');
+    console.log('\n\tschema-couch dev');
+    console.log('\n\tschema-couch dist');
 }
-var args = process.argv.slice(2);
 
-if (!args.length || args.length < 2) {
+if (!args.length || args.length < 1) {
     return usage();
 }
 
-var full_path = path.resolve(args[0]);
+if (args[0] == 'init') init();
+if (args[0] == 'push') push(args[1], args[2])
+if (args[0] == 'dev')  dev()
 
-schemaCouch(full_path, args[1], function(err, data){
-  if (err) console.log(err);
-});
+
+function push(couch_url, schema_folder) {
+  if (!couch_url) {
+    couch_url = require(path.resolve('.') + '/settings.json').couch
+
+    if (argv.u) {
+      couch_url = url.parse(couch_url);
+      couch_url.auth = argv.u;
+      if (argv.p) couch_url.auth += ':' + argv.p;
+      couch_url = url.format(couch_url);
+    }
+  }
+  if (!schema_folder) {
+    schema_folder = path.resolve('./schemas');
+  }
+  schemaCouch(schema_folder, couch_url, function(err, data){
+    if (err) console.log(err);
+  });
+}
+
+function init() {
+  var boilerplate_dir = path.resolve(__dirname, '../node_modules/schema-couch-boilerplate'),
+      dest_path = path.resolve('.');
+
+  cpr(boilerplate_dir, dest_path, {
+      //filter: /.git/,
+      deleteFirst: false, //Delete "to" before
+      overwrite: false, //If the file exists, overwrite it
+      confirm: true //After the copy, stat all the copied files to make sure they are there
+  }, function(errs, files) {
+      if (errs) {
+        console.log(errs);
+        console.log('init failed');
+        return;
+      }
+      // rm package.json
+      var p = path.resolve(dest_path, 'package.json');
+      fs.unlinkSync(p);
+      console.log('init complete');
+  });
+}
+
+function dev() {
+  // rm prod jam
+  var p = path.resolve('.', 'jam/require.prod.js');
+  try { fs.unlinkSync(p); } catch(e){}
+
+  // start a local server on a random port
+  var middleware = [];
+  middleware.push( connect.static(path.resolve('.')  ));
+  middleware.push(connect.directory(  path.resolve('.')  ))
+  var app = connect.apply(null, middleware);
+
+  getPort(app, function(port){
+
+    server
+      .listen(port, null)
+      .on('listening', function() {
+        console.log('server running on port: ', port);
+        open('http://localhost:' + port)
+      })
+
+  })
+
+}
+
+function getPort (app, cb) {
+  var port = portrange
+  portrange += 1
+
+  server = http.createServer(app)
+  server.listen(port, function (err) {
+    server.once('close', function () {
+      cb(port)
+    })
+    server.close()
+  })
+  server.on('error', function (err) {
+    getPort(cb)
+  })
+}
+
+// thinig init
+//   -- create a new project in the working directory
+
+// thing push url
+//   -- push the schemas using schema-couch to the url
+
+// thing dev
+//   -- remove production jam
+//   -- start a local server on a random port
+//   -- open the browser?
+
+// thing dist
+//  -- make a production jam
+//  -- make the templates.js define([text!game])
+//  -- make blank templates for undefined schemas
+//  -- cp to dist folder
