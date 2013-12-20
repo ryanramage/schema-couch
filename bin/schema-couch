@@ -33,6 +33,7 @@ if (args[0] == 'init') init();
 if (args[0] == 'push') push(args[1], args[2])
 if (args[0] == 'dev')  dev()
 if (args[0] == 'dist') dist()
+if (args[0] == 'server') server()
 
 
 function push(couch_url, schema_folder) {
@@ -121,7 +122,7 @@ function getPort (app, cb) {
     server.close()
   })
   server.on('error', function (err) {
-    getPort(cb)
+    getPort(app, cb)
   })
 }
 
@@ -152,14 +153,15 @@ function dist() {
 
 
   //  -- make the templates.js define([text!game])
-  var code = 'define([';
+  var code = '//auto generated code. dont edit\n';
+  code   +=  'define([';
   types.forEach(function(type){
     code += "'text!templates/" + type + "/list.html',";
     code += "'text!templates/" + type + "/view.html',";
     code += "'text!templates/" + type + "/edit.html',";
     code += "'text!templates/" + type + "/create.html',";
   });
-  code += '], function(){})'
+  code += '], function(a){})'
   fs.writeFileSync( path.resolve(templates_dir, 'build.js')  , code);
 
 
