@@ -14,6 +14,30 @@ ddoc.shows.unhandled = function(doc, req) {
     };
 }
 
+ddoc.shows.type_routes = function(doc, req) {
+  var type = req.query.type;
+  try {
+      var schema = require('views/lib/types/' + type);
+      var results = [];
+      results.push('/' + type + '/list');
+      results.push('/' + type + '/schema');
+      if (schema.has_many) {
+        schema.has_many.forEach(function(many){
+          results.push(many.name);
+        })
+      }
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify(results)
+      };
+  } catch(e) {
+      return {
+          'headers' : {'Content-Type' : 'application/json'},
+          'body' :  JSON.stringify({ok: false, msg: "Type not found"})
+      }
+  }
+}
+
 ddoc.shows.has_many = function(doc, req) {
   var type = req.query.type;
   try {
@@ -214,8 +238,12 @@ ddoc.rewrites = [
     { from: '_ddoc'   , to  : '',     description: "Access to this design document"  },
     { from: '_ddoc/*' , to  : '*'},
 
+    { from: '/schemas', to: '_show/schemas'},
+    { from: '/counts', to: '_view/list_by_type', query: { reduce: 'true', group_level: '1' }},
     { from: '/:type/schema', to: '_show/schemas', query: { type: ':type' }},
-    { from: '/', to: '_view/list_by_type', query: { reduce: 'true', group_level: '1' }},
+    { from: '/:type', to: '_show/type_routes', query: { type: ':type' }},
+    { from: '/',      to: '_show/types'},
+
     { from: '/*', to: '_show/unhandled' }
 ]
 

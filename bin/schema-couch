@@ -170,7 +170,7 @@ function dist() {
   var jam  = spawn(jpath, ['compile', '-i', 'js/app', '-i', 'templates/build',  '-o', 'jam/require.prod.js'])
   jam.stdin.end();
   jam.stdout.on('data', function(data){ console.log(data.toString()) });
-
+  jam.stderr.on('data', function(data){ console.log(data.toString()) });
 }
 
 function createIfNotExist(path) {

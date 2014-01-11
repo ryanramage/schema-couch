@@ -3,7 +3,7 @@ module.exports = function(name, schema) {
 
   // list all by type
   rewrites.push({
-    from: "/" + name,
+    from: "/" + name + '/list',
     to: "_view/list_by_type",
     query: {
       reduce: "false",
