@@ -20,6 +20,7 @@ module.exports = function(schema_dir, dbPath, loaded_callback, pushed_callback) 
   ddoc.views.lib.types = {};
   var schemas = fs.readdirSync(schema_dir);
   var loaded = false;
+
   schemas.forEach(function(schema){
 
     if ( schema.indexOf('.js', schema.length - '.js'.length) === -1) return;
