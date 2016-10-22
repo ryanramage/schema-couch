@@ -35,6 +35,32 @@ schemaCouch(schemaPath, dbUri, function(err) {
 });
 ```
 
+As the schemas are loaded and added there 3 phases, each with a callback hook:
+
+- `loaded`
+- `pushed`
+- `complete`
+
+You can customize the `onComplete` handler by implemeting this signature.
+See the `create-app/create-on-complete` for the default onComplete factory function, to use as an example and inspiration.
+
+```function(dbPath, webapp, callbacks) {
+  return function(err, final_doc) {
+    /// ... custom handler here ...
+  }
+}
+```
+
+Full customized callbacks example:
+
+```js
+schemaCouch(schemaPath, dbUri, {
+    onPushed: myOnPushed,
+    onLoaded: myOnLoaded,
+    createOnComplete: myCreateOnComplete
+});
+```
+
 ## Schema examples
 
 ### Schema: quiz.js
